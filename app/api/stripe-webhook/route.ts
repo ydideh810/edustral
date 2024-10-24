@@ -9,7 +9,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: Request) {
-  const body = await req.text();
+  // Get the raw body
+  const body = await req.text(); 
   const signature = headers().get('stripe-signature');
 
   if (!signature) {
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Construct Stripe event using the raw body and signature
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const supabase = createRouteHandlerClient({ cookies });
 
-      // Add credits to user's account
+      // Add credits to user's account using Supabase
       const { error } = await supabase.rpc('add_credits', {
         add_amount: Number(session.metadata?.credits || 0),
         user_id: session.metadata?.userId
@@ -48,10 +50,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-// Disable body parsing, need raw body for Stripe webhook
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
